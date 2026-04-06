@@ -248,7 +248,8 @@ if __name__ == "__main__":
     try:
         result = trigger_daily_job_emails()
         print(f"✅ Execution completed!")
-        print(f"   Summary: Total={result['total_leads']}, Triggered={result['triggered_count']}, Failed={result['failed_count']}")
+        # print(f"   Summary: Total={result['total_leads']}, Triggered={result['triggered_count']}, Failed={result['failed_count']}")
+        print(f"Summary: Total={result['total']}, Success={len(result['results']['successful'])}, Failed={len(result['results']['failed'])}")
     except Exception as e:
         print(f"❌ Critical error occurred: {e}")
         import traceback
