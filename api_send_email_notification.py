@@ -26,7 +26,7 @@ if not DATABASE_URL:
         "Please set it in your .env file."
     )
 
-# DAILY_JOB_EMAIL_URL = "https://applywizz.onrender.com/api/send-daily-job-email/"
+DAILY_JOB_EMAIL_URL = "https://applywizz.onrender.com/api/send-daily-job-email/"
 
 # FastAPI app
 app = FastAPI()
