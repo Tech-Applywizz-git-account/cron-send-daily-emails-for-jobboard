@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from typing import Optional
 import requests
 import os
+import time
 from datetime import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
