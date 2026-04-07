@@ -85,143 +85,146 @@ def get_active_job_board_leads():
 # -----------------------
 # Trigger Daily Emails API
 # -----------------------
-# def trigger_daily_job_emails():
-#     """
-#     Fetches all active job board leads and triggers the daily job email API for each.
-#     """
-#     leads = get_active_job_board_leads()
-    
-#     if not leads:
-#         print("ℹ️ No active job board leads found.")
-#         return {
-#             "success": True, 
-#             "message": "No active job board leads found.", 
-#             "total_leads": 0,
-#             "triggered_count": 0, 
-#             "failed_count": 0,
-#             "triggered_leads": [],
-#             "failed_leads": []
-#         }
-
-#     print(f"🚀 Found {len(leads)} active job board leads. Starting API triggers...")
-    
-#     triggered_leads = []
-#     failed_leads = []
-
-#     for lead in leads:
-#         apw_id = lead.get('apw_id')
-#         if not apw_id:
-#             print(f"⚠️ Skipping lead {lead.get('name')} - missing apwId")
-#             continue
-
-#         try:
-#             # Hit the daily job email endpoint for this specific lead
-#             payload = {"apwId": apw_id}
-#             response = requests.post(DAILY_JOB_EMAIL_URL, json=payload, timeout=15)
-            
-#             if response.ok:
-#                 print(f"✅ Successfully triggered email for {lead['name']} ({apw_id})")
-#                 triggered_leads.append({"name": lead['name'], "apw_id": apw_id})
-#             else:
-#                 print(f"❌ Failed to trigger email for {lead['name']} ({apw_id}): {response.status_code} - {response.text}")
-#                 failed_leads.append({"name": lead['name'], "apw_id": apw_id, "error": response.text})
-        
-#         except Exception as e:
-#             print(f"❌ Error triggering API for {lead['name']} ({apw_id}): {e}")
-#             failed_leads.append({"name": lead['name'], "apw_id": apw_id, "error": str(e)})
-
-#     return {
-#         "success": True,
-#         "total_leads": len(leads),
-#         "triggered_count": len(triggered_leads),
-#         "failed_count": len(failed_leads),
-#         "triggered_leads": triggered_leads,
-#         "failed_leads": failed_leads
-#     }
-
 def trigger_daily_job_emails():
     """
-    Fetches active leads and triggers the BULK API in batches of 2 with detailed logging.
+    Fetches all active job board leads and triggers the daily job email API for each.
     """
-    # 1. Fetch data
     leads = get_active_job_board_leads()
     
     if not leads:
-        print("ℹ️ [SKIP] No active job board leads found in database.")
-        return {"success": True, "message": "No leads found."}
+        print("ℹ️ No active job board leads found.")
+        return {
+            "success": True, 
+            "message": "No active job board leads found.", 
+            "total_leads": 0,
+            "triggered_count": 0, 
+            "failed_count": 0,
+            "triggered_leads": [],
+            "failed_leads": []
+        }
 
-    total_leads = len(leads)
-    print(f"🚀 [START] Found {total_leads} active leads. Splitting into batches of 2...")
-
-    # 2. Preparation
-    batch_size = 2
-    # Create batches of the full lead objects so we can log names/emails
-    batches = [leads[i:i + batch_size] for i in range(0, total_leads, batch_size)]
+    print(f"🚀 Found {len(leads)} active job board leads. Starting API triggers...")
     
-    final_results = {"successful": [], "failed": []}
+    triggered_leads = []
+    failed_leads = []
 
-    # 3. Processing Loop
-    for i, batch in enumerate(batches):
-        batch_num = i + 1
-        # Extract just the IDs for the API payload
-        batch_ids = [lead.get('apw_id') for lead in batch if lead.get('apw_id')]
-        
-        print(f"\n--- 📦 Processing Batch {batch_num}/{len(batches)} ---")
-        for lead in batch:
-            print(f"👉 Target: {lead.get('name')} | Email: {lead.get('email')} | ID: {lead.get('apw_id')}")
+    for lead in leads:
+        apw_id = lead.get('apw_id')
+        if not apw_id:
+            print(f"⚠️ Skipping lead {lead.get('name')} - missing apwId")
+            continue
 
         try:
-            payload = {"apwIds": batch_ids}
-            response = requests.post(BULK_JOB_EMAIL_URL, json=payload, timeout=45)
+            # Hit the daily job email endpoint for this specific lead
+            payload = {"apwId": apw_id}
+            response = requests.post(DAILY_JOB_EMAIL_URL, json=payload, timeout=15)
             
             if response.ok:
-                res_data = response.json()
-                batch_res = res_data.get("results", {})
-                
-                success_list = batch_res.get("successful", [])
-                fail_list = batch_res.get("failed", [])
-
-                # Detailed logging for this batch
-                if success_list:
-                    print(f"✅ SUCCESS: Sent to {len(success_list)} leads: {', '.join(success_list)}")
-                    final_results["successful"].extend(success_list)
-                
-                if fail_list:
-                    for f in fail_list:
-                        print(f"⚠️  FAILED: Lead {f.get('apwId')} | Reason: {f.get('error')}")
-                    final_results["failed"].extend(fail_list)
+                print(f"✅ Successfully triggered email for {lead['name']} ({apw_id})")
+                triggered_leads.append({"name": lead['name'], "apw_id": apw_id})
             else:
-                print(f"❌ CRITICAL: Batch {batch_num} API Error {response.status_code}: {response.text}")
-                for bid in batch_ids:
-                    final_results["failed"].append({"apwId": bid, "error": f"HTTP {response.status_code}"})
+                print(f"❌ Failed to trigger email for {lead['name']} ({apw_id}): {response.status_code} - {response.text}")
+                failed_leads.append({"name": lead['name'], "apw_id": apw_id, "error": response.text})
+            # --- ADD THIS LINE BELOW ---
+            print(f"Waiting 6 seconds to respect Azure rate limits...")
+            time.sleep(20)
         
         except Exception as e:
-            print(f"❌ CONNECTION ERROR: Batch {batch_num} failed to reach server: {e}")
-            for bid in batch_ids:
-                final_results["failed"].append({"apwId": bid, "error": str(e)})
-
-        # Optional: Sleep for 1 second to prevent hitting Azure too fast
-        time.sleep(1)
-
-    # 4. Final Summary Console Log
-    print("\n" + "="*40)
-    print("🏁 FINAL EXECUTION SUMMARY")
-    print("="*40)
-    print(f"Total Leads Found:    {total_leads}")
-    print(f"Successfully Sent:    {len(final_results['successful'])}")
-    print(f"Failed/Skipped:       {len(final_results['failed'])}")
-    
-    if final_results['failed']:
-        print("\n❌ FAILED LIST:")
-        for f in final_results['failed']:
-            print(f" - {f}")
-    print("="*40 + "\n")
+            print(f"❌ Error triggering API for {lead['name']} ({apw_id}): {e}")
+            failed_leads.append({"name": lead['name'], "apw_id": apw_id, "error": str(e)})
 
     return {
         "success": True,
-        "total": total_leads,
-        "results": final_results
+        "total_leads": len(leads),
+        "triggered_count": len(triggered_leads),
+        "failed_count": len(failed_leads),
+        "triggered_leads": triggered_leads,
+        "failed_leads": failed_leads
     }
+
+# def trigger_daily_job_emails():
+#     """
+#     Fetches active leads and triggers the BULK API in batches of 2 with detailed logging.
+#     """
+#     # 1. Fetch data
+#     leads = get_active_job_board_leads()
+    
+#     if not leads:
+#         print("ℹ️ [SKIP] No active job board leads found in database.")
+#         return {"success": True, "message": "No leads found."}
+
+#     total_leads = len(leads)
+#     print(f"🚀 [START] Found {total_leads} active leads. Splitting into batches of 2...")
+
+#     # 2. Preparation
+#     batch_size = 2
+#     # Create batches of the full lead objects so we can log names/emails
+#     batches = [leads[i:i + batch_size] for i in range(0, total_leads, batch_size)]
+    
+#     final_results = {"successful": [], "failed": []}
+
+#     # 3. Processing Loop
+#     for i, batch in enumerate(batches):
+#         batch_num = i + 1
+#         # Extract just the IDs for the API payload
+#         batch_ids = [lead.get('apw_id') for lead in batch if lead.get('apw_id')]
+        
+#         print(f"\n--- 📦 Processing Batch {batch_num}/{len(batches)} ---")
+#         for lead in batch:
+#             print(f"👉 Target: {lead.get('name')} | Email: {lead.get('email')} | ID: {lead.get('apw_id')}")
+
+#         try:
+#             payload = {"apwIds": batch_ids}
+#             response = requests.post(BULK_JOB_EMAIL_URL, json=payload, timeout=45)
+            
+#             if response.ok:
+#                 res_data = response.json()
+#                 batch_res = res_data.get("results", {})
+                
+#                 success_list = batch_res.get("successful", [])
+#                 fail_list = batch_res.get("failed", [])
+
+#                 # Detailed logging for this batch
+#                 if success_list:
+#                     print(f"✅ SUCCESS: Sent to {len(success_list)} leads: {', '.join(success_list)}")
+#                     final_results["successful"].extend(success_list)
+                
+#                 if fail_list:
+#                     for f in fail_list:
+#                         print(f"⚠️  FAILED: Lead {f.get('apwId')} | Reason: {f.get('error')}")
+#                     final_results["failed"].extend(fail_list)
+#             else:
+#                 print(f"❌ CRITICAL: Batch {batch_num} API Error {response.status_code}: {response.text}")
+#                 for bid in batch_ids:
+#                     final_results["failed"].append({"apwId": bid, "error": f"HTTP {response.status_code}"})
+        
+#         except Exception as e:
+#             print(f"❌ CONNECTION ERROR: Batch {batch_num} failed to reach server: {e}")
+#             for bid in batch_ids:
+#                 final_results["failed"].append({"apwId": bid, "error": str(e)})
+
+#         # Optional: Sleep for 1 second to prevent hitting Azure too fast
+#         time.sleep(1)
+
+#     # 4. Final Summary Console Log
+#     print("\n" + "="*40)
+#     print("🏁 FINAL EXECUTION SUMMARY")
+#     print("="*40)
+#     print(f"Total Leads Found:    {total_leads}")
+#     print(f"Successfully Sent:    {len(final_results['successful'])}")
+#     print(f"Failed/Skipped:       {len(final_results['failed'])}")
+    
+#     if final_results['failed']:
+#         print("\n❌ FAILED LIST:")
+#         for f in final_results['failed']:
+#             print(f" - {f}")
+#     print("="*40 + "\n")
+
+#     return {
+#         "success": True,
+#         "total": total_leads,
+#         "results": final_results
+#     }
 
 # -----------------------
 # NEW ENDPOINT: Trigger daily job emails for all active job board clients
@@ -248,8 +251,8 @@ if __name__ == "__main__":
     try:
         result = trigger_daily_job_emails()
         print(f"✅ Execution completed!")
-        # print(f"   Summary: Total={result['total_leads']}, Triggered={result['triggered_count']}, Failed={result['failed_count']}")
-        print(f"Summary: Total={result['total']}, Success={len(result['results']['successful'])}, Failed={len(result['results']['failed'])}")
+        print(f"   Summary: Total={result['total_leads']}, Triggered={result['triggered_count']}, Failed={result['failed_count']}")
+        # print(f"Summary: Total={result['total']}, Success={len(result['results']['successful'])}, Failed={len(result['results']['failed'])}")
     except Exception as e:
         print(f"❌ Critical error occurred: {e}")
         import traceback
