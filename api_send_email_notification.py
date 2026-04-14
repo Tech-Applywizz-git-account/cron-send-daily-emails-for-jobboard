@@ -27,8 +27,8 @@ if not DATABASE_URL:
         "Please set it in your .env file."
     )
 
-DAILY_JOB_EMAIL_URL = "https://applywizz.onrender.com/api/send-daily-job-email/"
-BULK_JOB_EMAIL_URL = "https://applywizz.onrender.com/api/send-bulk-daily-job-emails/"
+DAILY_JOB_EMAIL_URL = "https://dashboard.apply-wizz.com/api/send-daily-job-email/"
+BULK_JOB_EMAIL_URL = "https://dashboard.apply-wizz.com/api/send-bulk-daily-job-emails/"
 
 # FastAPI app
 app = FastAPI()
@@ -127,7 +127,7 @@ def trigger_daily_job_emails():
                 failed_leads.append({"name": lead['name'], "apw_id": apw_id, "error": response.text})
             # --- ADD THIS LINE BELOW ---
             print(f"Waiting 6 seconds to respect Azure rate limits...")
-            time.sleep(20)
+            time.sleep(6)
         
         except Exception as e:
             print(f"❌ Error triggering API for {lead['name']} ({apw_id}): {e}")
